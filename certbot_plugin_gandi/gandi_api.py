@@ -2,6 +2,10 @@ import requests
 import urllib
 from collections import namedtuple
 from certbot.plugins import dns_common
+try:
+    from urllib import quote  # Python 2.X
+except ImportError:
+    from urllib.parse import quote  # Python 3+
 
 
 _GandiConfig = namedtuple('_GandiConfig', ('api_key',))
@@ -33,7 +37,7 @@ def _headers(cfg):
 
 def _get_url(*segs):
     return 'https://dns.api.gandi.net/api/v5/{}'.format(
-        '/'.join(urllib.quote(seg, safe='') for seg in segs)
+        '/'.join(quote(seg, safe='') for seg in segs)
     )
 
 
@@ -61,7 +65,10 @@ def _get_relative_name(base_domain, name):
 
 
 def _del_txt_record(cfg, base_domain, relative_name):
-    return _request(cfg, 'DELETE', ('zones', base_domain.zone_uuid, 'records', relative_name, 'TXT'))
+    return _request(
+        cfg,
+        'DELETE',
+        ('zones', base_domain.zone_uuid, 'records', relative_name, 'TXT'))
 
 
 def _update_record(cfg, domain, name, request_runner):
@@ -78,13 +85,36 @@ def _update_record(cfg, domain, name, request_runner):
     return None if response.ok else _get_response_message(response)
 
 
+def get_txt_records(cfg, domain, name):
+
+    base_domain = _get_base_domain(cfg, domain)
+    if base_domain is None:
+        return 'Unable to get base domain for "{}"'.format(domain)
+    relative_name = _get_relative_name(base_domain, name)
+    if relative_name is None:
+        return 'Unable to derive relative name for "{}"'.format(name)
+
+    response = _request(
+        cfg,
+        'GET',
+        ('zones', base_domain.zone_uuid, 'records', relative_name, 'TXT'))
+    if response.ok:
+        return response.json().get('rrset_values')
+    else:
+        return []
+
+
 def add_txt_record(cfg, domain, name, value):
 
     def requester(base_domain, relative_name):
         _del_txt_record(cfg, base_domain, relative_name)
-        return _request(cfg, 'POST',
-                        ('zones', base_domain.zone_uuid, 'records', relative_name, 'TXT'),
-                        json={'rrset_values': [value]})
+        return _request(
+            cfg,
+            'POST',
+            ('zones', base_domain.zone_uuid, 'records', relative_name, 'TXT'),
+            json={
+                'rrset_values': value if isinstance(value, list) else [value]
+            })
 
     return _update_record(cfg, domain, name, requester)
 
@@ -95,5 +125,3 @@ def del_txt_record(cfg, domain, name):
         return _del_txt_record(cfg, base_domain, relative_name)
 
     return _update_record(cfg, domain, name, requester)
-
-
