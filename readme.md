@@ -4,7 +4,7 @@ This is a plugin for [Certbot](https://certbot.eff.org/) that uses the Gandi
 LiveDNS API to allow [Gandi](https://www.gandi.net/)
 customers to prove control of a domain name.
 
-1. Obtain a Gandi API token (see [Gandi LiveDNS API](https://doc.livedns.gandi.net/))
+1. Obtain a Gandi API token (see [Gandi LiveDNS API](https://doc.livedns.gandi.net/#step-1-get-your-api-key))
 
 2. Install the plugin:
 
@@ -22,11 +22,13 @@ customers to prove control of a domain name.
    to disallow access to other users.
 
 4. Run `certbot` and direct it to use the plugin for authentication and to use
-   the config file created in (3): 
+   the config file created in (3):
 
    ```shell
    certbot certonly -a certbot-plugin-gandi:dns --certbot-plugin-gandi:dns-credentials gandi.ini -d domain.com
    ```
 
-   Add additional options as required to specify an installation plugin etc.  
-   It is especially recommended you use the `--certname` flag to specify a name for your new certificate.
+   You generally want to use an absolute path to specify gandi.ini.
+
+For more additional options, e.g. to specify an installation plugin and more, refer to the certbot [documentation](https://certbot.eff.org/docs/).  
+It is especially recommended you use the `--cert-name` option to specify a name for your new certificate, because the certbot will create a config you can use for renewals later.
